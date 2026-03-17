@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up HeyCharge Gateway",
+        "description": "Enter the IP address or hostname of your HeyCharge Gateway device",
+        "data": {
+          "host": "Host (IP address or hostname)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the device. Please check the host address and ensure the device is powered on and connected to your network.",
+      "unknown": "An unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This device is already configured"
+    }
+  }
+}
