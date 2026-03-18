@@ -45,7 +45,7 @@ SENSORS: tuple[HeyChargeSensorEntityDescription, ...] = (
     ),
     HeyChargeSensorEntityDescription(
         key="charging_current_l1",
-        name="Current L1",
+        name="Charging Current L1",
         device_class=SensorDeviceClass.CURRENT,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -53,7 +53,7 @@ SENSORS: tuple[HeyChargeSensorEntityDescription, ...] = (
     ),
     HeyChargeSensorEntityDescription(
         key="charging_current_l2",
-        name="Current L2",
+        name="Charging Current L2",
         device_class=SensorDeviceClass.CURRENT,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -61,7 +61,7 @@ SENSORS: tuple[HeyChargeSensorEntityDescription, ...] = (
     ),
     HeyChargeSensorEntityDescription(
         key="charging_current_l3",
-        name="Current L3",
+        name="Charging Current L3",
         device_class=SensorDeviceClass.CURRENT,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -69,7 +69,7 @@ SENSORS: tuple[HeyChargeSensorEntityDescription, ...] = (
     ),
     HeyChargeSensorEntityDescription(
         key="charging_power",
-        name="Power",
+        name="Charging Power",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -77,7 +77,7 @@ SENSORS: tuple[HeyChargeSensorEntityDescription, ...] = (
     ),
     HeyChargeSensorEntityDescription(
         key="kwh_delivered",
-        name="Energy Delivered",
+        name="kWh Delivered",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -101,7 +101,7 @@ SENSORS: tuple[HeyChargeSensorEntityDescription, ...] = (
     ),
     HeyChargeSensorEntityDescription(
         key="current_session_duration",
-        name="Session Duration",
+        name="Current Session Duration",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.SECONDS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -112,6 +112,15 @@ SENSORS: tuple[HeyChargeSensorEntityDescription, ...] = (
         name="Charger State",
         icon="mdi:state-machine",
         value_fn=lambda data: data["status"].get("charger_state"),
+    ),
+    HeyChargeSensorEntityDescription(
+        key="p14a_current_limit",
+        name="P14a Current Limit",
+        device_class=SensorDeviceClass.CURRENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:transmission-tower",
+        value_fn=lambda data: data["status"].get("p14a_current_limit"),
     ),
 )
 

@@ -32,7 +32,7 @@ class HeyChargeDataUpdateCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             _LOGGER,
-            name="HeyCharge Gateway",
+            name="HeyCharge EV Charger",
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
 

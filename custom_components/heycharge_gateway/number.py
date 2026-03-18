@@ -27,7 +27,7 @@ class HeyChargeCurrentLimitNumber(CoordinatorEntity, NumberEntity):
     """Representation of a HeyCharge Gateway current limit number."""
 
     _attr_has_entity_name = True
-    _attr_name = "Current Limit"
+    _attr_name = "Charging Current Limit"
     _attr_icon = "mdi:current-ac"
     _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
     _attr_mode = NumberMode.SLIDER
@@ -39,7 +39,7 @@ class HeyChargeCurrentLimitNumber(CoordinatorEntity, NumberEntity):
     ) -> None:
         """Initialize the number."""
         super().__init__(coordinator)
-        self._attr_unique_id = f"{entry.entry_id}_current_limit"
+        self._attr_unique_id = f"{entry.entry_id}_charging_current_limit"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": entry.title,

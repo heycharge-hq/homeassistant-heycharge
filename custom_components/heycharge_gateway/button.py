@@ -38,7 +38,7 @@ class HeyChargeStartSessionButton(CoordinatorEntity, ButtonEntity):
     """Representation of a HeyCharge Gateway start session button."""
 
     _attr_has_entity_name = True
-    _attr_name = "Start Session"
+    _attr_name = "Start Session Personal"
     _attr_icon = "mdi:play-circle"
 
     def __init__(
@@ -48,7 +48,7 @@ class HeyChargeStartSessionButton(CoordinatorEntity, ButtonEntity):
     ) -> None:
         """Initialize the button."""
         super().__init__(coordinator)
-        self._attr_unique_id = f"{entry.entry_id}_start_session"
+        self._attr_unique_id = f"{entry.entry_id}_start_session_personal"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": entry.title,

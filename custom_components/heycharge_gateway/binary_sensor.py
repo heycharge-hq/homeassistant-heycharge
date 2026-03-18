@@ -29,9 +29,21 @@ class HeyChargeBinarySensorEntityDescription(BinarySensorEntityDescription):
 BINARY_SENSORS: tuple[HeyChargeBinarySensorEntityDescription, ...] = (
     HeyChargeBinarySensorEntityDescription(
         key="session_active",
-        name="Charging",
+        name="Session Active",
         device_class=BinarySensorDeviceClass.RUNNING,
         value_fn=lambda data: data["status"].get("session_active", False),
+    ),
+    HeyChargeBinarySensorEntityDescription(
+        key="p14a_enabled",
+        name="P14a Enabled",
+        icon="mdi:transmission-tower",
+        value_fn=lambda data: data["status"].get("p14a_enabled", False),
+    ),
+    HeyChargeBinarySensorEntityDescription(
+        key="p14a_active",
+        name="P14a Active",
+        icon="mdi:transmission-tower-import",
+        value_fn=lambda data: data["status"].get("p14a_active", False),
     ),
     HeyChargeBinarySensorEntityDescription(
         key="heycharge_backend_enabled",
