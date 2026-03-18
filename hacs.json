@@ -1,5 +1,5 @@
 {
-  "name": "HeyCharge Gateway",
+  "name": "HeyCharge EV Charger",
   "render_readme": true,
   "homeassistant": "2023.1.0"
 }
