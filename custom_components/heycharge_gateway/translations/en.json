@@ -1,5 +1,6 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Set up HeyCharge EV Charger",
@@ -7,6 +8,10 @@
         "data": {
           "host": "Host (IP address or hostname)"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "HeyCharge EV Charger discovered",
+        "description": "Do you want to set up {name}?"
       }
     },
     "error": {
@@ -14,7 +19,10 @@
       "unknown": "An unexpected error occurred"
     },
     "abort": {
-      "already_configured": "This device is already configured"
+      "already_configured": "This device is already configured",
+      "cannot_connect": "Failed to connect to the discovered device",
+      "no_device_id": "Discovered device did not advertise a device_id",
+      "unknown": "An unexpected error occurred"
     }
   }
 }

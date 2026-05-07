@@ -36,6 +36,19 @@ class HeyChargeDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
 
+    @property
+    def sw_version(self) -> str | None:
+        """Build a sw_version string for device_info from cached config data.
+
+        Returns "<fw_version> (<build_string>)" when both are present,
+        falls back to whichever is available, or None if neither is.
+        """
+        fw = (self.config_data or {}).get("fw_version")
+        build = (self.config_data or {}).get("build_string")
+        if fw and build:
+            return f"{fw} ({build})"
+        return fw or build or None
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
         try:

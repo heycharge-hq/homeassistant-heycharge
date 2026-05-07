@@ -54,6 +54,7 @@ class HeyChargeStartSessionButton(CoordinatorEntity, ButtonEntity):
             "name": entry.title,
             "manufacturer": "HeyCharge",
             "model": "GW-LITE",
+            "sw_version": coordinator.sw_version,
         }
 
     async def async_press(self) -> None:
@@ -81,6 +82,7 @@ class HeyChargeStartPersonalSessionButton(CoordinatorEntity, ButtonEntity):
             "name": entry.title,
             "manufacturer": "HeyCharge",
             "model": "GW-LITE",
+            "sw_version": coordinator.sw_version,
         }
 
     async def async_press(self) -> None:
@@ -108,6 +110,7 @@ class HeyChargeStartCompanySessionButton(CoordinatorEntity, ButtonEntity):
             "name": entry.title,
             "manufacturer": "HeyCharge",
             "model": "GW-LITE",
+            "sw_version": coordinator.sw_version,
         }
 
     async def async_press(self) -> None:
@@ -135,6 +138,7 @@ class HeyChargeEndSessionButton(CoordinatorEntity, ButtonEntity):
             "name": entry.title,
             "manufacturer": "HeyCharge",
             "model": "GW-LITE",
+            "sw_version": coordinator.sw_version,
         }
 
     async def async_press(self) -> None:

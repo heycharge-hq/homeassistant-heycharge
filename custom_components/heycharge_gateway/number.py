@@ -45,6 +45,7 @@ class HeyChargeCurrentLimitNumber(CoordinatorEntity, NumberEntity):
             "name": entry.title,
             "manufacturer": "HeyCharge",
             "model": "GW-LITE",
+            "sw_version": coordinator.sw_version,
         }
 
         # Get min/max from config

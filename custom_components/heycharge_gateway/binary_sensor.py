@@ -95,6 +95,7 @@ class HeyChargeBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "name": entry.title,
             "manufacturer": "HeyCharge",
             "model": "GW-LITE",
+            "sw_version": coordinator.sw_version,
         }
 
     @property

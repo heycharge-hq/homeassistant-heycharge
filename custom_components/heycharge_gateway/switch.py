@@ -44,6 +44,7 @@ class HeyChargePauseSwitch(CoordinatorEntity, SwitchEntity):
             "name": entry.title,
             "manufacturer": "HeyCharge",
             "model": "GW-LITE",
+            "sw_version": coordinator.sw_version,
         }
 
     @property

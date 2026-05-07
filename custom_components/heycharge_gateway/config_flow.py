@@ -8,6 +8,7 @@ import aiohttp
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.components import zeroconf
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
@@ -63,6 +64,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    def __init__(self) -> None:
+        """Initialize the config flow."""
+        self._discovered_host: str | None = None
+        self._discovered_name: str | None = None
+        self._discovered_device_id: str | None = None
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -85,6 +92,67 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+        )
+
+    async def async_step_zeroconf(
+        self, discovery_info: zeroconf.ZeroconfServiceInfo
+    ) -> FlowResult:
+        """Handle a flow initialized by zeroconf discovery.
+
+        The firmware advertises ``_heycharge._tcp`` on port 80 with TXT
+        records ``device_id``, ``model``, ``mode``, ``fwver``, ``build``,
+        ``api_path`` and (optionally) ``name``. See
+        ``src/modules/app/app_consumer_gateway.cpp::_registerMDNSDiscovery``.
+        """
+        properties = discovery_info.properties or {}
+        device_id = properties.get("device_id")
+        if not device_id:
+            return self.async_abort(reason="no_device_id")
+
+        host = f"http://{discovery_info.host}"
+
+        await self.async_set_unique_id(device_id)
+        # If already configured, update the host in case DHCP gave the
+        # device a new IP since the last successful connection.
+        self._abort_if_unique_id_configured(updates={"host": host})
+
+        self._discovered_host = host
+        self._discovered_device_id = device_id
+        self._discovered_name = (
+            properties.get("name")
+            or properties.get("model")
+            or "HeyCharge Gateway"
+        )
+
+        # Title placeholder shown on the discovery card in HA's UI.
+        self.context["title_placeholders"] = {"name": self._discovered_name}
+
+        return await self.async_step_zeroconf_confirm()
+
+    async def async_step_zeroconf_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Confirm a zeroconf-discovered device with the user."""
+        assert self._discovered_host is not None
+        if user_input is not None:
+            try:
+                info = await validate_input(
+                    self.hass, {CONF_HOST: self._discovered_host}
+                )
+            except CannotConnect:
+                return self.async_abort(reason="cannot_connect")
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
+                return self.async_abort(reason="unknown")
+
+            return self.async_create_entry(
+                title=info["title"],
+                data={"host": info["host"]},
+            )
+
+        return self.async_show_form(
+            step_id="zeroconf_confirm",
+            description_placeholders={"name": self._discovered_name or ""},
         )
 
 

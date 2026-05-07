@@ -7,5 +7,8 @@
   "integration_type": "device",
   "iot_class": "local_polling",
   "requirements": [],
-  "version": "0.0.12"
+  "version": "0.0.13",
+  "zeroconf": [
+    {"type": "_heycharge._tcp.local."}
+  ]
 }
