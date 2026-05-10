@@ -16,7 +16,7 @@ Custom integration providing native Home Assistant support for HeyCharge Gateway
 ### Manual
 
 ```bash
-cp -r custom_components/heycharge_gateway \
+cp -r custom_components/heycharge \
   /path/to/homeassistant/config/custom_components/
 ```
 
@@ -197,15 +197,15 @@ automation:
         above: 3000
     condition:
       - condition: state
-        entity_id: binary_sensor.heycharge_gateway_charging
+        entity_id: binary_sensor.heycharge_charging
         state: "off"
     action:
       - service: button.press
         target:
-          entity_id: button.heycharge_gateway_start_session
+          entity_id: button.heycharge_start_session
       - service: number.set_value
         target:
-          entity_id: number.heycharge_gateway_current_limit
+          entity_id: number.heycharge_current_limit
         data:
           value: 16
 ```
@@ -220,12 +220,12 @@ automation:
         at: "17:00:00"
     condition:
       - condition: state
-        entity_id: binary_sensor.heycharge_gateway_charging
+        entity_id: binary_sensor.heycharge_charging
         state: "on"
     action:
       - service: switch.turn_on
         target:
-          entity_id: switch.heycharge_gateway_pause_charging
+          entity_id: switch.heycharge_pause_charging
 
   - alias: "Resume charging after peak hours"
     trigger:
@@ -234,7 +234,7 @@ automation:
     action:
       - service: switch.turn_off
         target:
-          entity_id: switch.heycharge_gateway_pause_charging
+          entity_id: switch.heycharge_pause_charging
 ```
 
 ### Basic Entities Card
@@ -243,17 +243,17 @@ automation:
 type: entities
 title: EV Charging
 entities:
-  - entity: binary_sensor.heycharge_gateway_charging
-  - entity: sensor.heycharge_gateway_charger_state
-  - entity: sensor.heycharge_gateway_power
-  - entity: sensor.heycharge_gateway_energy_delivered
-  - entity: sensor.heycharge_gateway_current_l1
-  - entity: sensor.heycharge_gateway_current_l2
-  - entity: sensor.heycharge_gateway_current_l3
-  - entity: number.heycharge_gateway_current_limit
-  - entity: switch.heycharge_gateway_pause_charging
-  - entity: button.heycharge_gateway_start_session
-  - entity: button.heycharge_gateway_end_session
+  - entity: binary_sensor.heycharge_charging
+  - entity: sensor.heycharge_charger_state
+  - entity: sensor.heycharge_power
+  - entity: sensor.heycharge_energy_delivered
+  - entity: sensor.heycharge_current_l1
+  - entity: sensor.heycharge_current_l2
+  - entity: sensor.heycharge_current_l3
+  - entity: number.heycharge_current_limit
+  - entity: switch.heycharge_pause_charging
+  - entity: button.heycharge_start_session
+  - entity: button.heycharge_end_session
 ```
 
 ## Troubleshooting

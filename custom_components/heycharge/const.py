@@ -1,6 +1,6 @@
-"""Constants for the HeyCharge Gateway integration."""
+"""Constants for the HeyCharge integration."""
 
-DOMAIN = "heycharge_gateway"
+DOMAIN = "heycharge"
 
 # Configuration
 CONF_HOST = "host"
