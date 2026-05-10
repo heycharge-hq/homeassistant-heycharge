@@ -1,4 +1,4 @@
-"""Support for HeyCharge Gateway buttons."""
+"""Support for HeyCharge CONNECT buttons."""
 from __future__ import annotations
 
 from homeassistant.components.button import ButtonEntity
@@ -16,7 +16,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up HeyCharge Gateway button based on a config entry."""
+    """Set up HeyCharge CONNECT button based on a config entry."""
     coordinator: HeyChargeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     buttons = [
@@ -35,7 +35,7 @@ async def async_setup_entry(
 
 
 class HeyChargeStartSessionButton(CoordinatorEntity, ButtonEntity):
-    """Representation of a HeyCharge Gateway start session button."""
+    """Representation of a HeyCharge CONNECT start session button."""
 
     _attr_has_entity_name = True
     _attr_name = "Start Session Personal"
@@ -63,7 +63,7 @@ class HeyChargeStartSessionButton(CoordinatorEntity, ButtonEntity):
 
 
 class HeyChargeStartPersonalSessionButton(CoordinatorEntity, ButtonEntity):
-    """Representation of a HeyCharge Gateway start personal session button."""
+    """Representation of a HeyCharge CONNECT start personal session button."""
 
     _attr_has_entity_name = True
     _attr_name = "Start Session (Personal)"
@@ -91,7 +91,7 @@ class HeyChargeStartPersonalSessionButton(CoordinatorEntity, ButtonEntity):
 
 
 class HeyChargeStartCompanySessionButton(CoordinatorEntity, ButtonEntity):
-    """Representation of a HeyCharge Gateway start company session button."""
+    """Representation of a HeyCharge CONNECT start company session button."""
 
     _attr_has_entity_name = True
     _attr_name = "Start Session (Company)"
@@ -119,7 +119,7 @@ class HeyChargeStartCompanySessionButton(CoordinatorEntity, ButtonEntity):
 
 
 class HeyChargeEndSessionButton(CoordinatorEntity, ButtonEntity):
-    """Representation of a HeyCharge Gateway end session button."""
+    """Representation of a HeyCharge CONNECT end session button."""
 
     _attr_has_entity_name = True
     _attr_name = "End Session"

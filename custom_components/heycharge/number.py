@@ -1,4 +1,4 @@
-"""Support for HeyCharge Gateway number entities."""
+"""Support for HeyCharge CONNECT number entities."""
 from __future__ import annotations
 
 from homeassistant.components.number import NumberEntity, NumberMode
@@ -17,14 +17,14 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up HeyCharge Gateway number based on a config entry."""
+    """Set up HeyCharge CONNECT number based on a config entry."""
     coordinator: HeyChargeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities([HeyChargeCurrentLimitNumber(coordinator, entry)])
 
 
 class HeyChargeCurrentLimitNumber(CoordinatorEntity, NumberEntity):
-    """Representation of a HeyCharge Gateway current limit number."""
+    """Representation of a HeyCharge CONNECT current limit number."""
 
     _attr_has_entity_name = True
     _attr_name = "Charging Current Limit"

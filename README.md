@@ -1,15 +1,22 @@
-# HeyCharge Gateway Integration for Home Assistant
+# HeyCharge CONNECT — Home Assistant Integration
 
-Custom integration providing native Home Assistant support for HeyCharge Gateway devices in Consumer Gateway mode. Communicates directly with the gateway via HTTP REST API -- no MQTT broker required.
+Custom integration providing native Home Assistant support for the [**HeyCharge CONNECT**](https://heycharge.com/) product line. Talks directly to the device over LAN, no MQTT broker or cloud account required.
+
+| Product | What it does | Firmware mode |
+|--|--|--|
+| [**CONNECT Bridge**](https://heycharge.com/products/connect-bridge) | Adapts any OCPP wallbox to the HeyCharge platform — AC or DC | OCPP Translator |
+| [**CONNECT MagicBox**](https://heycharge.com/products/consumer-gateway) | Retrofit adapter that adds smart charging to any OCPP wallbox | Consumer Gateway |
+
+Both expose the same local HTTP REST API at `/api/consumer_gateway/*`, so this single integration covers both products.
 
 ## Features
 
-- **Direct HTTP Connection** -- polls the gateway's REST API every 5 seconds
-- **Zero Dependencies** -- no MQTT broker, no cloud account needed
-- **Full Control** -- start/stop sessions, adjust current limits, pause charging
-- **Comprehensive Monitoring** -- per-phase current, power, energy, session tracking
-- **Company Car Mode** -- separate personal and company session tracking (when enabled in gateway settings)
-- **Auto-Discovery** -- automatic device identification via the gateway config endpoint
+- **Direct HTTP connection** — polls the device's REST API every 5 seconds
+- **Zeroconf auto-discovery** — devices advertising `_heycharge._tcp` show up under **Settings → Devices & Services → Discovered**
+- **Full control** — start/stop sessions, adjust current limit, pause charging
+- **Comprehensive monitoring** — per-phase current, power, energy, session tracking
+- **Company car mode** — separate personal and company session tracking when enabled on the device
+- **§14a / P14a support** — exposes utility throttle state and effective limit when the device implements §14a (BNetzA grid-throttle support)
 
 ## Installation
 
@@ -24,21 +31,22 @@ Restart Home Assistant after copying.
 
 ### HACS
 
-1. Open HACS in your Home Assistant instance
-2. Click the three-dot menu > **Custom repositories**
-3. Add the repository URL and select **Integration** as the category
-4. Search for "HeyCharge Gateway" and install
-5. Restart Home Assistant
+1. Open HACS in your Home Assistant instance.
+2. Click the three-dot menu in the top-right → **Custom repositories**.
+3. Add the URL `https://github.com/heycharge-hq/homeassistant-heycharge` and pick **Integration** as the type.
+4. Click **Download** on the new "HeyCharge CONNECT" entry.
+5. Restart Home Assistant.
 
 ## Configuration
 
-1. Go to **Settings > Devices & Services**
-2. Click **+ Add Integration**
-3. Search for **HeyCharge Gateway**
-4. Enter the gateway's IP address or hostname (e.g. `192.168.1.100` or `heycharge-gw.local`)
-5. Click **Submit**
+If the device is on the same LAN, it should appear automatically under **Settings → Devices & Services → Discovered** (zeroconf, service type `_heycharge._tcp`). Otherwise add it manually:
 
-The integration auto-discovers the device and creates all entities.
+1. **Settings → Devices & Services → + Add Integration**.
+2. Search for **HeyCharge CONNECT**.
+3. Enter the device's IP or hostname (e.g. `192.168.1.100` or `gw-garage.local`).
+4. **Submit**.
+
+The integration fetches the device's config endpoint to identify it and create entities.
 
 ## Entities
 
@@ -63,8 +71,8 @@ The integration auto-discovers the device and creates all entities.
 | Entity | Key | Description |
 |--------|-----|-------------|
 | Charging | `session_active` | Whether a charging session is active |
-| HeyCharge Backend Enabled | `heycharge_backend_enabled` | Whether cloud backend is configured |
-| HeyCharge Backend Connected | `heycharge_backend_connected` | Whether cloud backend is connected |
+| HeyCharge Backend Enabled | `heycharge_backend_enabled` | Whether cloud backend is configured (currently `Unavailable` — pending firmware support) |
+| HeyCharge Backend Connected | `heycharge_backend_connected` | Whether cloud backend is connected (currently `Unavailable` — pending firmware support) |
 
 ### Switch (1)
 
@@ -119,12 +127,14 @@ The integration communicates with these firmware endpoints:
 
 ### GET /api/consumer_gateway/status
 
-Returns all sensor values. Polled every 5 seconds.
+Returns all sensor values. Polled every 5 seconds. Authenticated with HTTP Basic.
 
 ```json
 {
   "pause_charging": false,
-  "session_enabled": true,
+  "pause_charging_mqtt": false,
+  "pause_charging_modbus": false,
+  "session_active": true,
   "current_limit": 16.0,
   "current_request": 12.0,
   "charging_current_l1": 11.8,
@@ -134,12 +144,12 @@ Returns all sensor values. Polled every 5 seconds.
   "kwh_delivered": 3.45,
   "last_session_energy": 12.8,
   "last_session_duration": 3600,
-  "session_active": true,
   "current_session_duration": 1200,
   "charger_state": "Charging",
-  "session_type": "personal",
-  "heycharge_backend_enabled": true,
-  "heycharge_backend_connected": true
+  "p14a_enabled": false,
+  "p14a_active": false,
+  "p14a_current_limit": 0.0,
+  "admin_password_provisioned": true
 }
 ```
 
@@ -151,8 +161,11 @@ Returns device configuration (fetched once on startup).
 {
   "device_id": "A1B2C3D4",
   "charger_name": "Garage Charger",
+  "manufacturer": "HeyCharge",
+  "model": "GW-LITE",
+  "fw_version": "0.5.0",
+  "build_string": "...",
   "company_car_mode": false,
-  "heycharge_backend_enabled": true,
   "min_current": 6,
   "max_current": 32
 }
@@ -186,6 +199,8 @@ Type can be `"personal"` or `"company"`.
 
 ## Automation Examples
 
+> Replace `<device>` below with your device's slug — that's the lower-cased, underscored name HA derived from the device title at setup. For a charger named "Garage" it's `garage`; for an Autel-vendor device it's likely `autel`. Find the exact slug in **Developer Tools → States**.
+
 ### Start Charging with Solar Excess
 
 ```yaml
@@ -197,15 +212,15 @@ automation:
         above: 3000
     condition:
       - condition: state
-        entity_id: binary_sensor.heycharge_charging
+        entity_id: binary_sensor.<device>_session_active
         state: "off"
     action:
       - service: button.press
         target:
-          entity_id: button.heycharge_start_session
+          entity_id: button.<device>_start_session_personal
       - service: number.set_value
         target:
-          entity_id: number.heycharge_current_limit
+          entity_id: number.<device>_charging_current_limit
         data:
           value: 16
 ```
@@ -220,12 +235,12 @@ automation:
         at: "17:00:00"
     condition:
       - condition: state
-        entity_id: binary_sensor.heycharge_charging
+        entity_id: binary_sensor.<device>_session_active
         state: "on"
     action:
       - service: switch.turn_on
         target:
-          entity_id: switch.heycharge_pause_charging
+          entity_id: switch.<device>_pause_charging
 
   - alias: "Resume charging after peak hours"
     trigger:
@@ -234,7 +249,7 @@ automation:
     action:
       - service: switch.turn_off
         target:
-          entity_id: switch.heycharge_pause_charging
+          entity_id: switch.<device>_pause_charging
 ```
 
 ### Basic Entities Card
@@ -243,41 +258,41 @@ automation:
 type: entities
 title: EV Charging
 entities:
-  - entity: binary_sensor.heycharge_charging
-  - entity: sensor.heycharge_charger_state
-  - entity: sensor.heycharge_power
-  - entity: sensor.heycharge_energy_delivered
-  - entity: sensor.heycharge_current_l1
-  - entity: sensor.heycharge_current_l2
-  - entity: sensor.heycharge_current_l3
-  - entity: number.heycharge_current_limit
-  - entity: switch.heycharge_pause_charging
-  - entity: button.heycharge_start_session
-  - entity: button.heycharge_end_session
+  - entity: binary_sensor.<device>_session_active
+  - entity: sensor.<device>_charger_state
+  - entity: sensor.<device>_charging_power
+  - entity: sensor.<device>_kwh_delivered
+  - entity: sensor.<device>_charging_current_l1
+  - entity: sensor.<device>_charging_current_l2
+  - entity: sensor.<device>_charging_current_l3
+  - entity: number.<device>_charging_current_limit
+  - entity: switch.<device>_pause_charging
+  - entity: button.<device>_start_session_personal
+  - entity: button.<device>_end_session
 ```
 
 ## Troubleshooting
 
 ### Integration Can't Connect
 
-- Verify the gateway is powered on and connected to your network
+- Verify the device is powered on and connected to your network
 - Ensure the correct IP address/hostname is entered
-- Confirm the gateway is in **Consumer Gateway** mode (application mode 6)
-- Test the API directly: `curl http://<gateway-ip>/api/consumer_gateway/status`
+- Confirm the device is running in a supported mode: a [CONNECT Bridge](https://heycharge.com/products/connect-bridge) is in **OCPP Translator** (mode 2) and a [CONNECT MagicBox](https://heycharge.com/products/consumer-gateway) is in **Consumer Gateway** (mode 6). Other modes don't expose the local API.
+- Test the API directly: `curl -u <user>:<pass> http://<device-ip>/api/consumer_gateway/status` (the local API requires HTTP Basic auth)
 
 ### Entities Not Updating
 
 - Check Home Assistant logs for connection errors
-- Verify network connectivity between HA and the gateway
+- Verify network connectivity between HA and the device
 - Try reloading the integration from **Settings > Devices & Services**
 
 ### Session Type Sensor Missing
 
-The Session Type sensor only appears when **Company Car Mode** is enabled in the gateway firmware settings. This is normal if you don't need personal/company session tracking.
+The Session Type sensor only appears when **Company Car Mode** is enabled in the device's firmware settings. This is normal if you don't need personal/company session tracking.
 
 ### Charger State Shows "Unknown"
 
-This means the gateway hasn't received a status update from the charger yet. The state updates when the charger sends its periodic DeviceStatus messages.
+The device hasn't yet observed the wallbox's state. On a [CONNECT MagicBox](https://heycharge.com/products/consumer-gateway), the state arrives in periodic DeviceStatus messages from the charger. On a [CONNECT Bridge](https://heycharge.com/products/connect-bridge), it derives from the OCPP client connection state. Either way, the state appears as soon as the wallbox connects.
 
 ## Technical Details
 

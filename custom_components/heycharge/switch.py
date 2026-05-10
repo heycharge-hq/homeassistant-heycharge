@@ -1,4 +1,4 @@
-"""Support for HeyCharge Gateway switches."""
+"""Support for HeyCharge CONNECT switches."""
 from __future__ import annotations
 
 from typing import Any
@@ -18,14 +18,14 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up HeyCharge Gateway switch based on a config entry."""
+    """Set up HeyCharge CONNECT switch based on a config entry."""
     coordinator: HeyChargeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities([HeyChargePauseSwitch(coordinator, entry)])
 
 
 class HeyChargePauseSwitch(CoordinatorEntity, SwitchEntity):
-    """Representation of a HeyCharge Gateway pause charging switch."""
+    """Representation of a HeyCharge CONNECT pause charging switch."""
 
     _attr_has_entity_name = True
     _attr_name = "Pause Charging"

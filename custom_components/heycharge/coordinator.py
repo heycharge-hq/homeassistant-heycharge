@@ -1,4 +1,4 @@
-"""DataUpdateCoordinator for HeyCharge Gateway."""
+"""DataUpdateCoordinator for HeyCharge CONNECT."""
 from __future__ import annotations
 
 from datetime import timedelta
@@ -8,31 +8,47 @@ from typing import Any
 import aiohttp
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import API_STATUS, API_CONFIG, DEFAULT_SCAN_INTERVAL
+from .const import (
+    API_CONFIG,
+    API_CURRENT_LIMIT,
+    API_END_SESSION,
+    API_PAUSE,
+    API_START_SESSION,
+    API_STATUS,
+    DEFAULT_LOCAL_API_PASSWORD,
+    DEFAULT_SCAN_INTERVAL,
+    LOCAL_API_USERNAME,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class HeyChargeDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching HeyCharge Gateway data from the API."""
+    """Class to manage fetching HeyCharge CONNECT data from the API."""
 
     def __init__(
         self,
         hass: HomeAssistant,
         session: aiohttp.ClientSession,
         host: str,
+        password: str = DEFAULT_LOCAL_API_PASSWORD,
     ) -> None:
         """Initialize."""
         self.host = host
         self.session = session
         self.config_data: dict[str, Any] = {}
+        # Older firmware ignores Authorization headers and returns 200
+        # regardless; new firmware enforces this. Either way we always
+        # send the header — it's a no-op on devices that don't care.
+        self._auth = aiohttp.BasicAuth(LOCAL_API_USERNAME, password)
 
         super().__init__(
             hass,
             _LOGGER,
-            name="HeyCharge EV Charger",
+            name="HeyCharge CONNECT",
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
 
@@ -55,8 +71,13 @@ class HeyChargeDataUpdateCoordinator(DataUpdateCoordinator):
             # Fetch status data
             async with self.session.get(
                 f"{self.host}{API_STATUS}",
+                auth=self._auth,
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
+                if response.status == 401:
+                    raise ConfigEntryAuthFailed(
+                        "HeyCharge CONNECT rejected the admin password — re-enter it"
+                    )
                 if response.status != 200:
                     raise UpdateFailed(f"Error communicating with API: {response.status}")
 
@@ -67,8 +88,13 @@ class HeyChargeDataUpdateCoordinator(DataUpdateCoordinator):
                 try:
                     async with self.session.get(
                         f"{self.host}{API_CONFIG}",
+                        auth=self._auth,
                         timeout=aiohttp.ClientTimeout(total=10),
                     ) as response:
+                        if response.status == 401:
+                            raise ConfigEntryAuthFailed(
+                                "HeyCharge CONNECT rejected the admin password — re-enter it"
+                            )
                         if response.status == 200:
                             self.config_data = await response.json()
                 except aiohttp.ClientError:
@@ -83,78 +109,39 @@ class HeyChargeDataUpdateCoordinator(DataUpdateCoordinator):
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
 
-    async def async_set_pause(self, paused: bool) -> None:
-        """Set pause charging state."""
-        from .const import API_PAUSE
-
+    async def _post(self, path: str, payload: dict[str, Any], action: str) -> None:
+        """Issue an authenticated POST and translate failures uniformly."""
         try:
             async with self.session.post(
-                f"{self.host}{API_PAUSE}",
-                json={"paused": paused},
+                f"{self.host}{path}",
+                json=payload,
+                auth=self._auth,
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
+                if response.status == 401:
+                    raise ConfigEntryAuthFailed(
+                        "HeyCharge CONNECT rejected the admin password — re-enter it"
+                    )
                 if response.status != 200:
-                    raise UpdateFailed(f"Error setting pause state: {response.status}")
-
-            # Request immediate refresh
-            await self.async_request_refresh()
-
+                    raise UpdateFailed(f"Error {action}: {response.status}")
         except aiohttp.ClientError as err:
-            raise UpdateFailed(f"Error setting pause state: {err}")
+            raise UpdateFailed(f"Error {action}: {err}")
+
+        # Request immediate refresh after a successful command
+        await self.async_request_refresh()
+
+    async def async_set_pause(self, paused: bool) -> None:
+        """Set pause charging state."""
+        await self._post(API_PAUSE, {"paused": paused}, "setting pause state")
 
     async def async_set_current_limit(self, limit: float) -> None:
         """Set current limit."""
-        from .const import API_CURRENT_LIMIT
-
-        try:
-            async with self.session.post(
-                f"{self.host}{API_CURRENT_LIMIT}",
-                json={"limit": limit},
-                timeout=aiohttp.ClientTimeout(total=10),
-            ) as response:
-                if response.status != 200:
-                    raise UpdateFailed(f"Error setting current limit: {response.status}")
-
-            # Request immediate refresh
-            await self.async_request_refresh()
-
-        except aiohttp.ClientError as err:
-            raise UpdateFailed(f"Error setting current limit: {err}")
+        await self._post(API_CURRENT_LIMIT, {"limit": limit}, "setting current limit")
 
     async def async_start_session(self, session_type: str = "personal") -> None:
         """Start a charging session."""
-        from .const import API_START_SESSION
-
-        try:
-            async with self.session.post(
-                f"{self.host}{API_START_SESSION}",
-                json={"type": session_type},
-                timeout=aiohttp.ClientTimeout(total=10),
-            ) as response:
-                if response.status != 200:
-                    raise UpdateFailed(f"Error starting session: {response.status}")
-
-            # Request immediate refresh
-            await self.async_request_refresh()
-
-        except aiohttp.ClientError as err:
-            raise UpdateFailed(f"Error starting session: {err}")
+        await self._post(API_START_SESSION, {"type": session_type}, "starting session")
 
     async def async_end_session(self) -> None:
         """End the current charging session."""
-        from .const import API_END_SESSION
-
-        try:
-            async with self.session.post(
-                f"{self.host}{API_END_SESSION}",
-                json={},
-                timeout=aiohttp.ClientTimeout(total=10),
-            ) as response:
-                if response.status != 200:
-                    raise UpdateFailed(f"Error ending session: {response.status}")
-
-            # Request immediate refresh
-            await self.async_request_refresh()
-
-        except aiohttp.ClientError as err:
-            raise UpdateFailed(f"Error ending session: {err}")
+        await self._post(API_END_SESSION, {}, "ending session")

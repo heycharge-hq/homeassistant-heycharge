@@ -1,4 +1,4 @@
-"""Support for HeyCharge Gateway binary sensors."""
+"""Support for HeyCharge CONNECT binary sensors."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -65,7 +65,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up HeyCharge Gateway binary sensor based on a config entry."""
+    """Set up HeyCharge CONNECT binary sensor based on a config entry."""
     coordinator: HeyChargeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
@@ -75,7 +75,7 @@ async def async_setup_entry(
 
 
 class HeyChargeBinarySensor(CoordinatorEntity, BinarySensorEntity):
-    """Representation of a HeyCharge Gateway binary sensor."""
+    """Representation of a HeyCharge CONNECT binary sensor."""
 
     entity_description: HeyChargeBinarySensorEntityDescription
     _attr_has_entity_name = True

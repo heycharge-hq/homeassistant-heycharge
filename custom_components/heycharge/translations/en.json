@@ -3,25 +3,44 @@
     "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "Set up HeyCharge EV Charger",
-        "description": "Enter the IP address or hostname of your HeyCharge EV Charger",
+        "title": "Set up HeyCharge CONNECT",
+        "description": "Enter the IP address or hostname of your HeyCharge CONNECT device.",
         "data": {
-          "host": "Host (IP address or hostname)"
+          "host": "Host (IP address or hostname)",
+          "password": "Admin password"
+        },
+        "data_description": {
+          "password": "Leave the default unless you've changed the device's admin password (via UART or the device web UI). Older firmware ignores this field."
         }
       },
       "zeroconf_confirm": {
-        "title": "HeyCharge EV Charger discovered",
-        "description": "Do you want to set up {name}?"
+        "title": "HeyCharge CONNECT discovered",
+        "description": "Do you want to set up {name}?",
+        "data": {
+          "password": "Admin password"
+        },
+        "data_description": {
+          "password": "Leave the default unless you've changed the device's admin password (via UART or the device web UI). Older firmware ignores this field."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-enter HeyCharge CONNECT password",
+        "description": "The device rejected the stored admin password. Enter the current password to reconnect.",
+        "data": {
+          "password": "Admin password"
+        }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect to the device. Please check the host address and ensure the device is powered on and connected to your network.",
+      "invalid_auth": "The device rejected the admin password. Double-check the value and try again.",
       "unknown": "An unexpected error occurred"
     },
     "abort": {
       "already_configured": "This device is already configured",
       "cannot_connect": "Failed to connect to the discovered device",
       "no_device_id": "Discovered device did not advertise a device_id",
+      "reauth_successful": "Reauthentication was successful",
       "unknown": "An unexpected error occurred"
     }
   }

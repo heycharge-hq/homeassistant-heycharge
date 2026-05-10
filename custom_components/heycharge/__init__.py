@@ -1,15 +1,15 @@
-"""The HeyCharge Gateway integration."""
+"""The HeyCharge CONNECT integration."""
 from __future__ import annotations
 
 import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import CONF_PASSWORD, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN
+from .const import DEFAULT_LOCAL_API_PASSWORD, DOMAIN
 from .coordinator import HeyChargeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,13 +24,16 @@ PLATFORMS: list[Platform] = [
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up HeyCharge Gateway from a config entry."""
+    """Set up HeyCharge CONNECT from a config entry."""
     session = async_get_clientsession(hass)
 
     coordinator = HeyChargeDataUpdateCoordinator(
         hass,
         session,
         entry.data["host"],
+        # Fall back to the firmware default for entries created before
+        # password collection landed in the config flow.
+        entry.data.get(CONF_PASSWORD, DEFAULT_LOCAL_API_PASSWORD),
     )
 
     await coordinator.async_config_entry_first_refresh()
