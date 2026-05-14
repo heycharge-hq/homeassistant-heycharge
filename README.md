@@ -13,9 +13,8 @@ Both expose the same local HTTP REST API at `/api/consumer_gateway/*`, so this s
 
 - **Direct HTTP connection** — polls the device's REST API every 5 seconds
 - **Zeroconf auto-discovery** — devices advertising `_heycharge._tcp` show up under **Settings → Devices & Services → Discovered**
-- **Full control** — start/stop sessions, adjust current limit, pause charging
+- **Control** — stop the current session, adjust the current limit, pause/resume charging
 - **Comprehensive monitoring** — per-phase current, power, energy, session tracking
-- **Company car mode** — separate personal and company session tracking when enabled on the device
 - **§14a / P14a support** — exposes utility throttle state and effective limit when the device implements §14a (BNetzA grid-throttle support)
 
 ## Installation
@@ -50,29 +49,34 @@ The integration fetches the device's config endpoint to identify it and create e
 
 ## Entities
 
-### Sensors (10-11)
+### Sensors (11-12)
+
+The `Current Request` sensor only appears when the firmware reports the value (Consumer Gateway mode). OCPP Translator mode omits the field and the integration skips creating the entity entirely.
 
 | Entity | Key | Unit | Description |
 |--------|-----|------|-------------|
-| Current Request | `current_request` | A | Current requested by the EV |
-| Current L1 | `charging_current_l1` | A | Phase 1 actual current |
-| Current L2 | `charging_current_l2` | A | Phase 2 actual current |
-| Current L3 | `charging_current_l3` | A | Phase 3 actual current |
-| Power | `charging_power` | W | Total charging power |
-| Energy Delivered | `kwh_delivered` | kWh | Current session energy |
+| Current Request | `current_request` | A | Current requested by the EV (Consumer Gateway only) |
+| Charging Current L1 | `charging_current_l1` | A | Phase 1 actual current |
+| Charging Current L2 | `charging_current_l2` | A | Phase 2 actual current |
+| Charging Current L3 | `charging_current_l3` | A | Phase 3 actual current |
+| Charging Power | `charging_power` | W | Total charging power |
+| kWh Delivered | `kwh_delivered` | kWh | Current session energy |
 | Last Session Energy | `last_session_energy` | kWh | Previous session energy |
 | Last Session Duration | `last_session_duration` | s | Previous session time |
-| Session Duration | `current_session_duration` | s | Current session time |
-| Charger State | `charger_state` | -- | Human-readable state (Idle, Charging, etc.) |
-| Session Type | `session_type` | -- | personal/company/none (only when company car mode enabled) |
+| Current Session Duration | `current_session_duration` | s | Current session time |
+| Charger State | `charger_state` | -- | Human-readable state (see below) |
+| P14a Current Limit | `p14a_current_limit` | A | Effective grid-throttle limit when §14a curtailment is active |
+| Product | `product` | -- | Diagnostic; firmware product family (e.g. `CONNECT Bridge`) |
 
-### Binary Sensors (3)
+### Binary Sensors (5)
 
 | Entity | Key | Description |
 |--------|-----|-------------|
-| Charging | `session_active` | Whether a charging session is active |
-| HeyCharge Backend Enabled | `heycharge_backend_enabled` | Whether cloud backend is configured (currently `Unavailable` — pending firmware support) |
-| HeyCharge Backend Connected | `heycharge_backend_connected` | Whether cloud backend is connected (currently `Unavailable` — pending firmware support) |
+| Session Active | `session_active` | Whether a charging session is active |
+| P14a Enabled | `p14a_enabled` | Whether §14a grid-throttle support is configured on the device |
+| P14a Active | `p14a_active` | Whether §14a curtailment is currently asserted |
+| HeyCharge Backend Enabled | `heycharge_backend_enabled` | Cloud-backend feature flag — reports **off** until firmware emits this field in `/status` |
+| HeyCharge Backend Connected | `heycharge_backend_connected` | Cloud-backend connectivity — reports **off** until firmware emits this field in `/status` |
 
 ### Switch (1)
 
@@ -84,28 +88,21 @@ The integration fetches the device's config endpoint to identify it and create e
 
 | Entity | Key | Range | Description |
 |--------|-----|-------|-------------|
-| Current Limit | `current_limit` | 6-32 A | Maximum charging current |
+| Charging Current Limit | `current_limit` | 6-32 A | Maximum charging current |
 
-### Buttons (2-3)
-
-When company car mode is **disabled**:
+### Buttons (1)
 
 | Entity | Description |
 |--------|-------------|
-| Start Session | Start a personal charging session |
 | End Session | Stop the current session |
 
-When company car mode is **enabled**:
-
-| Entity | Description |
-|--------|-------------|
-| Start Session (Personal) | Start a personal session |
-| Start Session (Company) | Start a company session |
-| End Session | Stop the current session |
+> Starting a session from Home Assistant isn't currently exposed. The CONNECT firmware still has a `start_session` endpoint, but it's only useful when the wallbox needs an external trigger — most setups start charging by plugging in the EV. If you need a start-session button, file an issue with your use case.
 
 ## Charger States
 
-The Charger State sensor reports these values:
+The Charger State sensor reports a different vocabulary depending on which firmware mode the device is running in.
+
+### Consumer Gateway (CONNECT MagicBox)
 
 | State | Description |
 |-------|-------------|
@@ -120,6 +117,19 @@ The Charger State sensor reports these values:
 | Fatal Error | Hardware or communication error |
 | Boot | Charger is booting up |
 | Host OTA | Firmware update in progress |
+
+### OCPP Translator (CONNECT Bridge)
+
+| State | Description |
+|-------|-------------|
+| Disconnected | No OCPP client connected (wallbox offline) |
+| Preparing Connection | OCPP client connected but BootNotification not yet completed |
+| Idle | Wallbox connected and idle |
+| Starting | Remote- or local-start in flight, transaction not yet active |
+| Charging | Active OCPP transaction (also surfaced briefly during WebSocket reconnect to avoid flicker) |
+| Stopping | Stop in flight, transaction winding down |
+| Faulted | Wallbox reported a fault |
+| Updating | OCPP firmware update in progress |
 
 ## REST API Reference
 
@@ -149,9 +159,14 @@ Returns all sensor values. Polled every 5 seconds. Authenticated with HTTP Basic
   "p14a_enabled": false,
   "p14a_active": false,
   "p14a_current_limit": 0.0,
-  "admin_password_provisioned": true
+  "admin_password_provisioned": true,
+  "uptime_seconds": 12345,
+  "boot_count": 7,
+  "last_reset_reason": "POWERON"
 }
 ```
+
+`current_request` is omitted by OCPP Translator firmware — its absence signals the integration to skip creating the entity.
 
 ### GET /api/consumer_gateway/config
 
@@ -163,6 +178,7 @@ Returns device configuration (fetched once on startup).
   "charger_name": "Garage Charger",
   "manufacturer": "HeyCharge",
   "model": "GW-LITE",
+  "product": "CONNECT Bridge",
   "fw_version": "0.5.0",
   "build_string": "...",
   "company_car_mode": false,
@@ -184,46 +200,39 @@ Returns device configuration (fetched once on startup).
 ```
 Accepted range: 6-32 A.
 
-### POST /api/consumer_gateway/start_session
-
-```json
-{"type": "personal"}
-```
-Type can be `"personal"` or `"company"`.
-
 ### POST /api/consumer_gateway/end_session
 
 ```json
 {}
 ```
 
+> The firmware also exposes `POST /api/consumer_gateway/start_session` with a `{"type": "personal"|"company"}` payload, but this integration does not call it.
+
 ## Automation Examples
 
 > Replace `<device>` below with your device's slug — that's the lower-cased, underscored name HA derived from the device title at setup. For a charger named "Garage" it's `garage`; for an Autel-vendor device it's likely `autel`. Find the exact slug in **Developer Tools → States**.
 
-### Start Charging with Solar Excess
+### Match Current Limit to Solar Excess
 
 ```yaml
 automation:
-  - alias: "Charge car with solar excess"
+  - alias: "Set charge current to track solar excess"
     trigger:
-      - platform: numeric_state
+      - platform: state
         entity_id: sensor.solar_excess_power
-        above: 3000
     condition:
       - condition: state
         entity_id: binary_sensor.<device>_session_active
-        state: "off"
+        state: "on"
     action:
-      - service: button.press
-        target:
-          entity_id: button.<device>_start_session_personal
       - service: number.set_value
         target:
           entity_id: number.<device>_charging_current_limit
         data:
-          value: 16
+          value: "{{ (states('sensor.solar_excess_power') | float / 230) | round(0) | int }}"
 ```
+
+The integration doesn't expose a start-session button (the car normally starts charging by being plugged in), so solar-excess automations are usually current-limit adjustments rather than start triggers.
 
 ### Pause During Peak Hours
 
@@ -267,7 +276,6 @@ entities:
   - entity: sensor.<device>_charging_current_l3
   - entity: number.<device>_charging_current_limit
   - entity: switch.<device>_pause_charging
-  - entity: button.<device>_start_session_personal
   - entity: button.<device>_end_session
 ```
 
@@ -278,17 +286,13 @@ entities:
 - Verify the device is powered on and connected to your network
 - Ensure the correct IP address/hostname is entered
 - Confirm the device is running in a supported mode: a [CONNECT Bridge](https://heycharge.com/products/connect-bridge) is in **OCPP Translator** (mode 2) and a [CONNECT MagicBox](https://heycharge.com/products/consumer-gateway) is in **Consumer Gateway** (mode 6). Other modes don't expose the local API.
-- Test the API directly: `curl -u <user>:<pass> http://<device-ip>/api/consumer_gateway/status` (the local API requires HTTP Basic auth)
+- Test the API directly: `curl -u admin:<password> http://<device-ip>/api/consumer_gateway/status` (HTTP Basic; username is fixed as `admin`, password is whatever was set on the device via WebUI or UART)
 
 ### Entities Not Updating
 
 - Check Home Assistant logs for connection errors
 - Verify network connectivity between HA and the device
 - Try reloading the integration from **Settings > Devices & Services**
-
-### Session Type Sensor Missing
-
-The Session Type sensor only appears when **Company Car Mode** is enabled in the device's firmware settings. This is normal if you don't need personal/company session tracking.
 
 ### Charger State Shows "Unknown"
 
