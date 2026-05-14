@@ -22,19 +22,16 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     API_CONFIG,
-    DEFAULT_LOCAL_API_PASSWORD,
     DOMAIN,
     LOCAL_API_USERNAME,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-# Password is masked in the UI but pre-filled with the firmware default,
-# so users on default-password devices (and on legacy no-auth firmware)
-# can hit Submit without thinking about credentials.
-_PASSWORD_FIELD = vol.Required(
-    CONF_PASSWORD, default=DEFAULT_LOCAL_API_PASSWORD
-)
+# Optional, no pre-fill. Older firmware (no auth gate) works with a blank
+# password — we just don't send any Authorization header. Newer firmware
+# requires the user to type whatever password they actually configured.
+_PASSWORD_FIELD = vol.Optional(CONF_PASSWORD, default="")
 _PASSWORD_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
@@ -65,14 +62,16 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     the right error message.
     """
     host = data[CONF_HOST]
-    password = data.get(CONF_PASSWORD, DEFAULT_LOCAL_API_PASSWORD)
+    password = data.get(CONF_PASSWORD, "")
 
     # Ensure host starts with http:// or https://
     if not host.startswith(("http://", "https://")):
         host = f"http://{host}"
 
     session = async_get_clientsession(hass)
-    auth = aiohttp.BasicAuth(LOCAL_API_USERNAME, password)
+    # Skip Basic auth entirely when the password is blank — older firmware
+    # has no auth gate and accepts anonymous requests.
+    auth = aiohttp.BasicAuth(LOCAL_API_USERNAME, password) if password else None
 
     try:
         async with session.get(

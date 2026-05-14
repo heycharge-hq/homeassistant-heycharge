@@ -16,9 +16,7 @@ from .const import (
     API_CURRENT_LIMIT,
     API_END_SESSION,
     API_PAUSE,
-    API_START_SESSION,
     API_STATUS,
-    DEFAULT_LOCAL_API_PASSWORD,
     DEFAULT_SCAN_INTERVAL,
     LOCAL_API_USERNAME,
 )
@@ -34,16 +32,19 @@ class HeyChargeDataUpdateCoordinator(DataUpdateCoordinator):
         hass: HomeAssistant,
         session: aiohttp.ClientSession,
         host: str,
-        password: str = DEFAULT_LOCAL_API_PASSWORD,
+        password: str = "",
     ) -> None:
         """Initialize."""
         self.host = host
         self.session = session
         self.config_data: dict[str, Any] = {}
-        # Older firmware ignores Authorization headers and returns 200
-        # regardless; new firmware enforces this. Either way we always
-        # send the header — it's a no-op on devices that don't care.
-        self._auth = aiohttp.BasicAuth(LOCAL_API_USERNAME, password)
+        # Empty password → send no Authorization header. Older firmware
+        # without an auth gate works that way; newer firmware on a
+        # non-default password rejects with 401, which we surface as
+        # ConfigEntryAuthFailed below to trigger reauth.
+        self._auth: aiohttp.BasicAuth | None = (
+            aiohttp.BasicAuth(LOCAL_API_USERNAME, password) if password else None
+        )
 
         super().__init__(
             hass,
@@ -64,6 +65,11 @@ class HeyChargeDataUpdateCoordinator(DataUpdateCoordinator):
         if fw and build:
             return f"{fw} ({build})"
         return fw or build or None
+
+    @property
+    def product(self) -> str | None:
+        """Product family name (e.g. 'CONNECT Bridge', 'CONNECT MagicBox')."""
+        return (self.config_data or {}).get("product")
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
@@ -137,10 +143,6 @@ class HeyChargeDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_set_current_limit(self, limit: float) -> None:
         """Set current limit."""
         await self._post(API_CURRENT_LIMIT, {"limit": limit}, "setting current limit")
-
-    async def async_start_session(self, session_type: str = "personal") -> None:
-        """Start a charging session."""
-        await self._post(API_START_SESSION, {"type": session_type}, "starting session")
 
     async def async_end_session(self) -> None:
         """End the current charging session."""

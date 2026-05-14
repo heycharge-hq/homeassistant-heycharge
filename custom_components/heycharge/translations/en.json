@@ -10,7 +10,7 @@
           "password": "Admin password"
         },
         "data_description": {
-          "password": "Leave the default unless you've changed the device's admin password (via UART or the device web UI). Older firmware ignores this field."
+          "password": "Leave blank if you don't know your password and have an older device."
         }
       },
       "zeroconf_confirm": {
@@ -20,7 +20,7 @@
           "password": "Admin password"
         },
         "data_description": {
-          "password": "Leave the default unless you've changed the device's admin password (via UART or the device web UI). Older firmware ignores this field."
+          "password": "Leave blank if you don't know your password and have an older device."
         }
       },
       "reauth_confirm": {

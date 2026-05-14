@@ -44,7 +44,7 @@ class HeyChargeCurrentLimitNumber(CoordinatorEntity, NumberEntity):
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": entry.title,
             "manufacturer": "HeyCharge",
-            "model": "GW-LITE",
+            "model": coordinator.product or "GW-LITE",
             "sw_version": coordinator.sw_version,
         }
 

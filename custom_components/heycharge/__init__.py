@@ -9,7 +9,7 @@ from homeassistant.const import CONF_PASSWORD, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DEFAULT_LOCAL_API_PASSWORD, DOMAIN
+from .const import DOMAIN
 from .coordinator import HeyChargeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,9 +31,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass,
         session,
         entry.data["host"],
-        # Fall back to the firmware default for entries created before
-        # password collection landed in the config flow.
-        entry.data.get(CONF_PASSWORD, DEFAULT_LOCAL_API_PASSWORD),
+        # Empty/missing password means "send no Authorization header" —
+        # the right behaviour for older firmware that doesn't enforce auth.
+        entry.data.get(CONF_PASSWORD, ""),
     )
 
     await coordinator.async_config_entry_first_refresh()

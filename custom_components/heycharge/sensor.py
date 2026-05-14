@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    EntityCategory,
     UnitOfElectricCurrent,
     UnitOfEnergy,
     UnitOfPower,
@@ -122,16 +123,14 @@ SENSORS: tuple[HeyChargeSensorEntityDescription, ...] = (
         icon="mdi:transmission-tower",
         value_fn=lambda data: data["status"].get("p14a_current_limit"),
     ),
+    HeyChargeSensorEntityDescription(
+        key="product",
+        name="Product",
+        icon="mdi:tag-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data["config"].get("product"),
+    ),
 )
-
-# Conditional sensor: only created when company car mode is enabled
-SESSION_TYPE_SENSOR = HeyChargeSensorEntityDescription(
-    key="session_type",
-    name="Session Type",
-    icon="mdi:account-badge",
-    value_fn=lambda data: data["status"].get("session_type"),
-)
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -141,15 +140,15 @@ async def async_setup_entry(
     """Set up HeyCharge CONNECT sensor based on a config entry."""
     coordinator: HeyChargeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    # Skip current_request when the firmware did not emit the field (e.g. OCPP
+    # translator mode). The first coordinator refresh has already populated
+    # coordinator.data by the time async_setup_entry is called.
+    status = coordinator.data.get("status", {})
     entities = [
         HeyChargeSensor(coordinator, description, entry)
         for description in SENSORS
+        if description.key != "current_request" or "current_request" in status
     ]
-
-    # Conditionally add session_type sensor when company car mode is enabled
-    config = coordinator.data.get("config", {})
-    if config.get("company_car_mode", False):
-        entities.append(HeyChargeSensor(coordinator, SESSION_TYPE_SENSOR, entry))
 
     async_add_entities(entities)
 
@@ -174,7 +173,7 @@ class HeyChargeSensor(CoordinatorEntity, SensorEntity):
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": entry.title,
             "manufacturer": "HeyCharge",
-            "model": "GW-LITE",
+            "model": coordinator.product or "GW-LITE",
             "sw_version": coordinator.sw_version,
         }
 
